@@ -36,8 +36,10 @@ spec:
         databases:
           - name: sp-revurdering-monitor
             envVarPrefix: DATABASE
-env:
-  - name: KAFKA_CONSUMER_GROUP_ID
-    value: tbd-revurdering-monitor-v1
-  - name: KAFKA_RAPID_TOPIC
-    value: tbd.rapid.v1
+  secureLogs:
+    enabled: true
+  env:
+    - name: KAFKA_CONSUMER_GROUP_ID
+      value: tbd-revurdering-monitor-v1
+    - name: KAFKA_RAPID_TOPIC
+      value: tbd.rapid.v1
