@@ -1,0 +1,44 @@
+apiVersion: nais.io/v1alpha1
+kind: Application
+metadata:
+  name: sp-revurdering-monitor
+  namespace: tbd
+  labels:
+    team: tbd
+spec:
+  image: {{image}}
+  liveness:
+    path: isalive
+    port: 8080
+    initialDelay: 1
+  readiness:
+    path: isready
+    port: 8080
+    initialDelay: 1
+  replicas:
+    min: 1
+    max: 1
+  prometheus:
+    enabled: true
+    path: /metrics
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 200m
+      memory: 256Mi
+  ingresses:
+  gcp:
+    sqlInstances:
+      - type: POSTGRES_14
+        databases:
+          diskAutoresize: true
+          name: sp-revurdering-monitor
+          envVarPrefix: DATABASE
+          users:
+env:
+  - name: KAFKA_CONSUMER_GROUP_ID
+    value: tbd-revurdering-monitor-v1
+  - name: KAFKA_RAPID_TOPIC
+    value: tbd.rapid.v1
