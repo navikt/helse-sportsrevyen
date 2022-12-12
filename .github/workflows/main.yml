@@ -13,7 +13,7 @@ jobs:
       - name: create docker tag
         run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
     outputs:
-      image: ghcr.io/${{ github.repository }}/spock:${{ env.TAG }}
+      image: ghcr.io/${{ github.repository }}/sp-revurdering-monitor:${{ env.TAG }}
 
   build:
     name: build docker image
@@ -44,7 +44,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --project-name=spock --org=tbd-ty7 --fail-on=all
+          args: --project-name=sp-revurdering-monitor --org=tbd-ty7 --fail-on=all
           command: monitor
 
   deployDev:
