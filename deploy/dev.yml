@@ -32,11 +32,10 @@ spec:
   gcp:
     sqlInstances:
       - type: POSTGRES_14
+        diskAutoresize: true
         databases:
-          diskAutoresize: true
           name: sp-revurdering-monitor
           envVarPrefix: DATABASE
-          users:
 env:
   - name: KAFKA_CONSUMER_GROUP_ID
     value: tbd-revurdering-monitor-v1
