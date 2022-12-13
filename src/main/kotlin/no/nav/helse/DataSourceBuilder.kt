@@ -2,9 +2,12 @@ package no.nav.helse
 
 import com.zaxxer.hikari.HikariConfig
 import com.zaxxer.hikari.HikariDataSource
+import kotliquery.TransactionalSession
+import kotliquery.sessionOf
 import org.flywaydb.core.Flyway
 import org.slf4j.LoggerFactory
 import java.time.Duration
+import javax.sql.DataSource
 
 // Understands how to create a data source from environment variables
 internal class DataSourceBuilder(env: Map<String, String>) {
@@ -37,5 +40,11 @@ internal class DataSourceBuilder(env: Map<String, String>) {
 
     private companion object {
         private val logger = LoggerFactory.getLogger(DataSourceBuilder::class.java)
+    }
+}
+
+internal fun <R> DataSource.transactional(returnGeneratedKey: Boolean = false, block: TransactionalSession.() -> R): R {
+    return sessionOf(this, returnGeneratedKey = returnGeneratedKey).use {
+        it.transaction(block)
     }
 }

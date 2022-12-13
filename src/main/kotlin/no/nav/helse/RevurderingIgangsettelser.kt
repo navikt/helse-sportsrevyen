@@ -1,10 +1,11 @@
 package no.nav.helse
 
 import com.fasterxml.jackson.databind.JsonNode
+import kotliquery.TransactionalSession
 import kotliquery.queryOf
-import kotliquery.sessionOf
 import no.nav.helse.rapids_rivers.*
 import org.intellij.lang.annotations.Language
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 import javax.sql.DataSource
@@ -45,53 +46,61 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
         val periodeForEndringTom = packet["periodeForEndringTom"].asLocalDate()
         val berørtePerioder = packet["berørtePerioder"]
 
-        sessionOf(dataSource()).use {
-            it.transaction { session ->
-                @Language("PostgreSQL")
-                val statement = """
-                     INSERT INTO revurdering(id, opprettet, kilde, fodselsnummer, aktor_id, skjaeringstidspunkt, periode_for_endring_fom, periode_for_endring_tom, aarsak)
-                     VALUES (:id, :opprettet, :kilde, :fodselsnummer, :aktor_id, :skjaeringstidspunkt, :periode_for_endring_fom, :periode_for_endring_tom, :aarsak)
-                      """
-                session.run(
-                    queryOf(
-                        statement = statement,
-                        paramMap = mapOf(
-                            "id" to id,
-                            "opprettet" to opprettet,
-                            "kilde" to kilde,
-                            "fodselsnummer" to fødselsnummer,
-                            "aktor_id" to aktørId,
-                            "skjaeringstidspunkt" to skjæringstidspunkt,
-                            "periode_for_endring_fom" to periodeForEndringFom,
-                            "periode_for_endring_tom" to periodeForEndringTom,
-                            "aarsak" to årsak
-                        )
-                    ).asExecute
-                )
-
-                @Language("PostgreSQL")
-                val statement2 = """
-                    INSERT INTO revurdering_vedtaksperiode(vedtaksperiode_id, revurdering_igangsatt_id, orgnummer, periode_fom, periode_tom, skjaeringstidspunkt)
-                    VALUES ${berørtePerioder.joinToString { "(?, ?, ?, ?, ?, ?)" }}
-                """
-
-                session.run(
-                    queryOf(
-                        statement = statement2,
-                        *berørtePerioder.flatMap { periode ->
-                            listOf(
-                                periode.path("vedtaksperiodeId").let { UUID.fromString(it.asText()) },
-                                id,
-                                periode.path("orgnummer").asText(),
-                                periode.path("periodeFom").asLocalDate(),
-                                periode.path("periodeTom").asLocalDate(),
-                                periode.path("skjæringstidspunkt").asLocalDate()
-                            )
-                        }.toTypedArray()
-                    ).asExecute
-                )
-            }
+        dataSource().transactional {
+            opprettRevurdering(id, opprettet, kilde, fødselsnummer, aktørId, skjæringstidspunkt, periodeForEndringFom, periodeForEndringTom, årsak)
+            opprettVedtaksperioder(id, berørtePerioder)
         }
+    }
 
+    private fun TransactionalSession.opprettRevurdering(
+        id: UUID,
+        opprettet: LocalDateTime,
+        kilde: UUID,
+        fødselsnummer: String,
+        aktørId: String,
+        skjæringstidspunkt: LocalDate,
+        periodeForEndringFom: LocalDate,
+        periodeForEndringTom: LocalDate,
+        årsak: String
+    ) {
+        run(queryOf(INSERT_REVURDERING, mapOf(
+            "id" to id,
+            "opprettet" to opprettet,
+            "kilde" to kilde,
+            "fodselsnummer" to fødselsnummer,
+            "aktor_id" to aktørId,
+            "skjaeringstidspunkt" to skjæringstidspunkt,
+            "periode_for_endring_fom" to periodeForEndringFom,
+            "periode_for_endring_tom" to periodeForEndringTom,
+            "aarsak" to årsak
+        )).asExecute)
+    }
+
+    private fun TransactionalSession.opprettVedtaksperioder(id: UUID, berørtePerioder: JsonNode) {
+        run(queryOf(INSERT_VEDTAKSPERIODE.format(berørtePerioder.joinToString { "(?, ?, ?, ?, ?, ?)" }), *berørtePerioder.flatMap { periode ->
+            listOf(
+                periode.path("vedtaksperiodeId").let { UUID.fromString(it.asText()) },
+                id,
+                periode.path("orgnummer").asText(),
+                periode.path("periodeFom").asLocalDate(),
+                periode.path("periodeTom").asLocalDate(),
+                periode.path("skjæringstidspunkt").asLocalDate()
+            )
+        }.toTypedArray()).asExecute)
+    }
+
+    private companion object {
+        @Language("PostgreSQL")
+        private const val INSERT_REVURDERING = """
+             INSERT INTO revurdering(id, opprettet, kilde, fodselsnummer, aktor_id, skjaeringstidspunkt, periode_for_endring_fom, periode_for_endring_tom, aarsak)
+             VALUES (:id, :opprettet, :kilde, :fodselsnummer, :aktor_id, :skjaeringstidspunkt, :periode_for_endring_fom, :periode_for_endring_tom, :aarsak)
+              """
+
+
+        @Language("PostgreSQL")
+        private const val INSERT_VEDTAKSPERIODE = """
+                    INSERT INTO revurdering_vedtaksperiode(vedtaksperiode_id, revurdering_igangsatt_id, orgnummer, periode_fom, periode_tom, skjaeringstidspunkt)
+                    VALUES %s
+                """
     }
 }
