@@ -14,7 +14,7 @@ import java.util.*
 class RevurderingIgangsattE2ETest {
     private val embeddedPostgres = embeddedPostgres()
     private val dataSource = setupDataSourceMedFlyway(embeddedPostgres)
-    private val river = TestRapid().apply { RevurderingIgangsettelser(this, dataSource = dataSource) }
+    private val river = TestRapid().apply { RevurderingIgangsettelser(this, dataSource = { dataSource }) }
 
     @AfterAll
     fun tearDown() {
@@ -38,7 +38,7 @@ class RevurderingIgangsattE2ETest {
     private fun tellRevurderingIgangsatt(id: UUID): Int {
         return sessionOf(dataSource).use { session ->
             @Language("PostgreSQL")
-            val query = "SELECT COUNT(*) FROM revurdering_igangsatt WHERE id = '$id'"
+            val query = "SELECT COUNT(*) FROM revurdering WHERE id = '$id'"
             requireNotNull(
                 session.run(queryOf(query).map { row -> row.int(1) }.asSingle)
             )
@@ -48,7 +48,7 @@ class RevurderingIgangsattE2ETest {
     private fun tellRevurderingIgangsattVedtaksperioder(id: UUID): Int {
         return sessionOf(dataSource).use { session ->
             @Language("PostgreSQL")
-            val query = "SELECT COUNT(*) FROM revurdering_igangsatt_vedtaksperiode WHERE revurdering_igangsatt_id = '$id'"
+            val query = "SELECT COUNT(*) FROM revurdering_vedtaksperiode WHERE revurdering_igangsatt_id = '$id'"
             requireNotNull(
                 session.run(queryOf(query).map { row -> row.int(1) }.asSingle)
             )

@@ -16,15 +16,13 @@ fun main() {
 
 fun launchApp(env: Map<String, String>) {
     val dataSourceBuilder = DataSourceBuilder(env)
-    val dataSource = dataSourceBuilder.getDataSource()
 
     RapidApplication.create(env).apply {
-        RevurderingIgangsettelser(this, dataSource)
+        RevurderingIgangsettelser(this) { dataSourceBuilder.getDataSource() }
         // Tilstandsendringer(this, dataSource)
     }.apply {
         register(object : RapidsConnection.StatusListener {
             override fun onStartup(rapidsConnection: RapidsConnection) {
-                println("hellow revurdering-monitor")
                 dataSourceBuilder.migrate()
             }
         })
