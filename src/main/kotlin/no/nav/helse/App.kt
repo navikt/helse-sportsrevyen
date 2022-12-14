@@ -47,7 +47,7 @@ enum class Revurderingstatus {
             any { it == AVVIST_MANUELT } -> AVVIST_MANUELT
             any { it == AVVIST_AUTOMATISK } -> AVVIST_AUTOMATISK
             all { it == ERSTATTET } -> ERSTATTET
-            all { it == FERDIGSTILT_AUTOMATISK } -> FERDIGSTILT_AUTOMATISK
+            all { it in setOf(FERDIGSTILT_AUTOMATISK, ERSTATTET) } -> FERDIGSTILT_AUTOMATISK
             else -> FERDIGSTILT_MANUELT
         }
     }

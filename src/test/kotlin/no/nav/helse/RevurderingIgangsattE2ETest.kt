@@ -104,6 +104,91 @@ class RevurderingIgangsattE2ETest {
     }
 
     @Test
+    fun `erstatter perioder som er del av ny revurdering`() {
+        val vedtaksperiodeId1 = UUID.randomUUID()
+        val vedtaksperiodeId2 = UUID.randomUUID()
+        val periode1 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId1,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 7),
+            periodeTom = LocalDate.of(2022, 11, 29),
+            orgnummer = "456"
+        )
+        val periode2 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId2,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 30),
+            periodeTom = LocalDate.of(2022, 12, 15),
+            orgnummer = "456"
+        )
+
+        val revurderingId1 = UUID.randomUUID()
+        val revurderingId2 = UUID.randomUUID()
+        val utbetalingId = UUID.randomUUID()
+        river.sendTestMessage(revurderingIgangsatt(id = revurderingId1, berørtePerioder = listOf(periode1, periode2)))
+        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId1, utbetalingId))
+        river.sendTestMessage(godkjenningsbehov(utbetalingId, godkjent = true, behandletMaskinelt = true))
+        river.sendTestMessage(revurderingIgangsatt(id = revurderingId2, berørtePerioder = listOf(periode2)))
+
+        assertEquals(FERDIGSTILT_AUTOMATISK, statusForRevurderingIgangsatt(revurderingId1))
+        assertEquals(IKKE_FERDIG, statusForRevurderingIgangsatt(revurderingId2))
+        statusForBerørteVedtaksperioder(revurderingId1).also { statuser ->
+            assertEquals(FERDIGSTILT_AUTOMATISK, statuser[vedtaksperiodeId1])
+            assertEquals(ERSTATTET, statuser[vedtaksperiodeId2])
+        }
+        statusForBerørteVedtaksperioder(revurderingId2).also { statuser ->
+            assertEquals(IKKE_FERDIG, statuser[vedtaksperiodeId2])
+        }
+        river.inspektør.also { rapidInspector ->
+            val ferdigstiltmelding = rapidInspector.message(rapidInspector.size - 1)
+            assertEquals("revurdering_ferdigstilt", ferdigstiltmelding.path("@event_name").asText())
+            assertEquals(revurderingId1.toString(), ferdigstiltmelding.path("revurderingId").asText())
+            assertEquals("FERDIGSTILT_AUTOMATISK", ferdigstiltmelding.path("status").asText())
+            val berørtPerioder = ferdigstiltmelding.path("berørtePerioder").associate {
+                UUID.fromString(it.path("vedtaksperiodeId").asText()) to it.path("status").asText()
+            }
+            assertEquals(2, berørtPerioder.size)
+            assertEquals("FERDIGSTILT_AUTOMATISK", berørtPerioder[vedtaksperiodeId1])
+            assertEquals("ERSTATTET", berørtPerioder[vedtaksperiodeId2])
+        }
+    }
+
+    @Test
+    fun `erstatter perioder som er del av ny revurdering - og ferdigstiller revurderingen`() {
+        val vedtaksperiodeId1 = UUID.randomUUID()
+        val vedtaksperiodeId2 = UUID.randomUUID()
+        val periode1 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId1,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 7),
+            periodeTom = LocalDate.of(2022, 11, 29),
+            orgnummer = "456"
+        )
+        val periode2 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId2,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 30),
+            periodeTom = LocalDate.of(2022, 12, 15),
+            orgnummer = "456"
+        )
+
+        val revurderingId1 = UUID.randomUUID()
+        val revurderingId2 = UUID.randomUUID()
+        river.sendTestMessage(revurderingIgangsatt(id = revurderingId1, berørtePerioder = listOf(periode1, periode2)))
+        river.sendTestMessage(revurderingIgangsatt(id = revurderingId2, berørtePerioder = listOf(periode2)))
+
+        assertEquals(IKKE_FERDIG, statusForRevurderingIgangsatt(revurderingId1))
+        assertEquals(IKKE_FERDIG, statusForRevurderingIgangsatt(revurderingId2))
+        statusForBerørteVedtaksperioder(revurderingId1).also { statuser ->
+            assertEquals(IKKE_FERDIG, statuser[vedtaksperiodeId1])
+            assertEquals(ERSTATTET, statuser[vedtaksperiodeId2])
+        }
+        statusForBerørteVedtaksperioder(revurderingId2).also { statuser ->
+            assertEquals(IKKE_FERDIG, statuser[vedtaksperiodeId2])
+        }
+    }
+
+    @Test
     fun `lagrer ikke vedtaksperiode utbetalinger for perioder som ikke er berørt`() {
         val vedtaksperiodeId = UUID.randomUUID()
         river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId))
