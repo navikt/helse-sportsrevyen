@@ -21,6 +21,7 @@ fun launchApp(env: Map<String, String>) {
         RevurderingIgangsettelser(this, dataSourceBuilder::getDataSource)
         VedtaksperiodeUtbetalinger(this, dataSourceBuilder::getDataSource)
         Godkjenninger(this, dataSourceBuilder::getDataSource)
+        RevurderingFeilet(this, dataSourceBuilder::getDataSource)
     }.apply {
         register(object : RapidsConnection.StatusListener {
             override fun onStartup(rapidsConnection: RapidsConnection) {

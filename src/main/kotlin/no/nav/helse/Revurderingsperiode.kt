@@ -78,6 +78,11 @@ data class Revurderingsperiode(
         return this.copy(status = vedtaksperiodeStatus(utbetalingGodkjent, utførtMaskinelt))
     }
 
+    fun feilet(vedtaksperiodeId: UUID): Revurderingsperiode {
+        if (this.vedtaksperiode != vedtaksperiodeId) return this
+        return this.copy(status = Revurderingstatus.FEILET)
+    }
+
     private fun vedtaksperiodeStatus(utbetalingGodkjent: Boolean, utførtMaskinelt: Boolean) =
         when (utbetalingGodkjent) {
             true -> when (utførtMaskinelt) {
