@@ -6,13 +6,13 @@ import no.nav.helse.Revurderingstatus.Companion.aggregertStatus
 import org.intellij.lang.annotations.Language
 import java.util.*
 
-data class UferdigRevurdering(private val revurdering: UUID, private val perioder: List<UferdigeRevurderingsperioder>) {
-    fun erstatt() {
-        // setter erstattet på alle perioder, og så på seg selv
+data class UferdigRevurdering(private val revurdering: UUID, private val perioder: List<Revurderingsperiode>) {
+    fun lagreStatus(session: TransactionalSession) {
+        perioder.forEach { it.lagreStatus(session) }
     }
 }
 
-data class UferdigeRevurderingsperioder(
+data class Revurderingsperiode(
     private val vedtaksperiode: UUID,
     private val revurdering: UUID,
     private val status: Revurderingstatus
@@ -35,11 +35,17 @@ data class UferdigeRevurderingsperioder(
         )
     }
 
+    private fun erstattet(berørtePerioder: List<UUID>): Revurderingsperiode {
+        if (this.vedtaksperiode !in berørtePerioder) return this
+        return this.copy(status = Revurderingstatus.ERSTATTET)
+    }
+
     internal companion object {
-        fun List<UferdigeRevurderingsperioder>.alleBerørtePerioder(session: TransactionalSession): List<UferdigeRevurderingsperioder> {
+
+        fun List<Revurderingsperiode>.alleBerørtePerioder(session: TransactionalSession): List<Revurderingsperiode> {
             val revurderingId = revurderingId()
             return session.run(queryOf(finnStatusPåRevurdering, mapOf("revurdering" to revurderingId)).map { row ->
-                UferdigeRevurderingsperioder(
+                Revurderingsperiode(
                     row.uuid("vedtaksperiode_id"),
                     revurderingId,
                     Revurderingstatus.valueOf(row.string("status"))
@@ -47,7 +53,7 @@ data class UferdigeRevurderingsperioder(
             }.asList)
         }
 
-        fun List<UferdigeRevurderingsperioder>.revurderingId(): UUID {
+        fun List<Revurderingsperiode>.revurderingId(): UUID {
             val unikeRevurderinger = map { it.revurdering }.toSet()
             check(unikeRevurderinger.size == 1) {
                 "Klarer ikke å tyde hvilken revurderingId som skal gjelde. Forventet bare én: $unikeRevurderinger"
@@ -55,7 +61,7 @@ data class UferdigeRevurderingsperioder(
             return first().revurdering
         }
 
-        fun List<UferdigeRevurderingsperioder>.lagreStatus(session: TransactionalSession): Revurderingstatus {
+        fun List<Revurderingsperiode>.lagreStatus(session: TransactionalSession): Revurderingstatus {
             val revurderingId = revurderingId()
             val aggregertStatus = map { it.status }.aggregertStatus()
             session.run(
@@ -69,14 +75,14 @@ data class UferdigeRevurderingsperioder(
             return aggregertStatus
         }
 
-        fun alleUferdigeRevurderinger(berørtePerioder: List<UUID>, session: TransactionalSession): List<UferdigRevurdering> {
-            val perioder: List<UferdigeRevurderingsperioder> = session.run(
+        fun alleUferdigeRevurderingerOgErstattBerørte(berørtePerioder: List<UUID>, session: TransactionalSession): List<UferdigRevurdering> {
+            val perioder: List<Revurderingsperiode> = session.run(
                 queryOf(perioderIEnUferdigRevurdering.format(berørtePerioder.joinToString() { "?" }), *berørtePerioder.toTypedArray()).map {
-                    UferdigeRevurderingsperioder(
+                    Revurderingsperiode(
                         vedtaksperiode = it.uuid("vedtaksperiode_id"),
                         revurdering = it.uuid("revurdering_igangsatt_id"),
                         status = Revurderingstatus.valueOf(it.string("status"))
-                    )
+                    ).erstattet(berørtePerioder)
                 }.asList)
             return perioder.groupBy { it.revurdering }.map { (key, value) ->
                 UferdigRevurdering(key, value)
@@ -99,7 +105,6 @@ data class UferdigeRevurderingsperioder(
         private const val finnStatusPåRevurdering = """
             select vedtaksperiode_id, status from revurdering_vedtaksperiode where revurdering_igangsatt_id = :revurdering
         """
-
         @Language("PostgreSQL")
         private const val perioderIEnUferdigRevurdering = """
             select andre.vedtaksperiode_id, andre.revurdering_igangsatt_id, andre.status

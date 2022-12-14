@@ -54,7 +54,10 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
     }
 
     private fun TransactionalSession.erstatt(berørtePerioder: List<UUID>) {
-        UferdigeRevurderingsperioder.alleUferdigeRevurderinger(berørtePerioder, this)
+        val uferdigeRevurderinger = Revurderingsperiode.alleUferdigeRevurderingerOgErstattBerørte(berørtePerioder, this)
+        uferdigeRevurderinger.forEach {
+            it.lagreStatus(this)
+        }
     }
 
     private fun TransactionalSession.opprettRevurdering(

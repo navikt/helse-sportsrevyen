@@ -2,9 +2,9 @@ package no.nav.helse
 
 import kotliquery.TransactionalSession
 import kotliquery.queryOf
-import no.nav.helse.UferdigeRevurderingsperioder.Companion.alleBerørtePerioder
-import no.nav.helse.UferdigeRevurderingsperioder.Companion.lagreStatus
-import no.nav.helse.UferdigeRevurderingsperioder.Companion.revurderingId
+import no.nav.helse.Revurderingsperiode.Companion.alleBerørtePerioder
+import no.nav.helse.Revurderingsperiode.Companion.lagreStatus
+import no.nav.helse.Revurderingsperiode.Companion.revurderingId
 import no.nav.helse.Revurderingstatus.*
 import no.nav.helse.rapids_rivers.*
 import org.intellij.lang.annotations.Language
@@ -67,7 +67,7 @@ class Godkjenninger(rapidApplication: RapidsConnection, private val dataSource: 
     ) = run(
         queryOf(hentUferdigePerioder, mapOf("utbetaling_id" to utbetalingId))
             .map { row ->
-                UferdigeRevurderingsperioder(
+                Revurderingsperiode(
                     row.uuid("vedtaksperiode_id"),
                     row.uuid("revurdering_igangsatt_id"),
                     nyVedtaksperiodestatus
