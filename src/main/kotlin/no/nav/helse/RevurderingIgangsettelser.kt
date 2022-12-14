@@ -3,6 +3,7 @@ package no.nav.helse
 import com.fasterxml.jackson.databind.JsonNode
 import kotliquery.TransactionalSession
 import kotliquery.queryOf
+import no.nav.helse.Revurderingsperiode.Companion.somRevurderinger
 import no.nav.helse.rapids_rivers.*
 import org.intellij.lang.annotations.Language
 import java.time.LocalDate
@@ -47,16 +48,19 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
         val berørtePerioder = packet["berørtePerioder"]
 
         dataSource().transactional {
-            erstatt(berørtePerioder.map { UUID.fromString(it["vedtaksperiodeId"].asText()) })
+            erstatt(context, berørtePerioder.map { UUID.fromString(it["vedtaksperiodeId"].asText()) })
             opprettRevurdering(id, opprettet, kilde, fødselsnummer, aktørId, skjæringstidspunkt, periodeForEndringFom, periodeForEndringTom, årsak)
             opprettVedtaksperioder(id, berørtePerioder)
         }
     }
 
-    private fun TransactionalSession.erstatt(berørtePerioder: List<UUID>) {
-        val uferdigeRevurderinger = Revurderingsperiode.alleUferdigeRevurderingerOgErstattBerørte(berørtePerioder, this)
+    private fun TransactionalSession.erstatt(context: MessageContext, berørtePerioder: List<UUID>) {
+        val uferdigeRevurderinger = Revurderingsperiode.alleUferdigeRevurderinger(berørtePerioder, this)
+            .map { it.erstattet(berørtePerioder) }
+            .somRevurderinger()
+
         uferdigeRevurderinger.forEach {
-            it.lagreStatus(this)
+            it.lagreStatus(this, context)
         }
     }
 
@@ -98,12 +102,6 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
     }
 
     private companion object {
-        @Language("PostgreSQL")
-        private const val ERSTATT_PERIODER = """
-            UPDATE revurdering_vedtaksperiode SET status = 'ERSTATTET'
-            WHERE status = 'IKKE_FERDIG' AND vedtaksperiode_id in (:ider)
-        """
-
         @Language("PostgreSQL")
         private const val INSERT_REVURDERING = """
              INSERT INTO revurdering(id, opprettet, kilde, fodselsnummer, aktor_id, skjaeringstidspunkt, periode_for_endring_fom, periode_for_endring_tom, aarsak)
