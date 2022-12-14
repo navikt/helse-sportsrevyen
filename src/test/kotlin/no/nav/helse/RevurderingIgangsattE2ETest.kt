@@ -4,23 +4,31 @@ import kotliquery.queryOf
 import kotliquery.sessionOf
 import no.nav.helse.rapids_rivers.testsupport.TestRapid
 import org.intellij.lang.annotations.Language
-import org.junit.jupiter.api.AfterAll
+import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.TestInstance
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.*
 
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RevurderingIgangsattE2ETest {
     private val embeddedPostgres = embeddedPostgres()
     private val dataSource = setupDataSourceMedFlyway(embeddedPostgres)
-    private val river = TestRapid().apply { RevurderingIgangsettelser(this, dataSource = { dataSource }) }
+    private val river = TestRapid().apply {
+        RevurderingIgangsettelser(this, ::dataSource)
+        VedtaksperiodeUtbetalinger(this, ::dataSource)
+    }
 
     @AfterAll
     fun tearDown() {
         river.stop()
         dataSource.connection.close()
         embeddedPostgres.close()
+    }
+
+    @AfterEach
+    fun reset() {
+        dataSource.resetDatabase()
     }
 
     @Test
@@ -34,6 +42,62 @@ class RevurderingIgangsattE2ETest {
         assertEquals(2, revurderingIgangsattVedtaksperioder)
     }
 
+    @Test
+    fun `lagrer vedtaksperiode utbetalinger`() {
+        val vedtaksperiodeId1 = UUID.randomUUID()
+        val vedtaksperiodeId2 = UUID.randomUUID()
+        val periode1 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId1,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 7),
+            periodeTom = LocalDate.of(2022, 11, 29),
+            orgnummer = "456"
+        )
+        val periode2 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId2,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 30),
+            periodeTom = LocalDate.of(2022, 12, 15),
+            orgnummer = "456"
+        )
+
+        val id = UUID.randomUUID()
+        river.sendTestMessage(revurderingIgangsatt(id = id, berørtePerioder = listOf(periode1, periode2)))
+        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId1))
+
+        assertEquals(1, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId1))
+        assertEquals(0, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId2))
+    }
+
+    @Test
+    fun `lagrer ikke vedtaksperiode utbetalinger for perioder som ikke er berørt`() {
+        val vedtaksperiodeId = UUID.randomUUID()
+        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId))
+        assertEquals(0, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId))
+    }
+
+    @Test
+    @Disabled
+    fun `lagrer ikke vedtaksperiode utbetalinger for perioder som er ferdig`() {
+        val vedtaksperiodeId = UUID.randomUUID()
+        val periode1 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 7),
+            periodeTom = LocalDate.of(2022, 11, 29),
+            orgnummer = "456"
+        )
+
+        val id = UUID.randomUUID()
+        val utbetalingId = UUID.randomUUID()
+        river.sendTestMessage(revurderingIgangsatt(id = id, berørtePerioder = listOf(periode1)))
+        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId, utbetalingId))
+        // TODO: ferdigstill/godkjent utbetalingen
+
+        assertEquals(1, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId))
+        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId, UUID.randomUUID()))
+        assertEquals(1, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId))
+    }
 
     private fun tellRevurderingIgangsatt(id: UUID): Int {
         return sessionOf(dataSource).use { session ->
@@ -55,12 +119,38 @@ class RevurderingIgangsattE2ETest {
         }
     }
 
+    private fun tellVedtaksperiodeUtbetalinger(vedtaksperiodeId: UUID): Int {
+        return sessionOf(dataSource).use { session ->
+            @Language("PostgreSQL")
+            val query = "SELECT COUNT(*) FROM vedtaksperiode_utbetaling WHERE vedtaksperiode_id = '$vedtaksperiodeId'"
+            requireNotNull(
+                session.run(queryOf(query).map { row -> row.int(1) }.asSingle)
+            )
+        }
+    }
+
 
     @Language("JSON")
-    fun revurderingIgangsatt(
+    private fun revurderingIgangsatt(
         kilde: UUID = UUID.randomUUID(),
         id: UUID = UUID.randomUUID(),
-        årsak: String = "KORRIGERT_SØKNAD"
+        årsak: String = "KORRIGERT_SØKNAD",
+        berørtePerioder: List<BerørtPeriode> = listOf(
+            BerørtPeriode(
+                vedtaksperiodeId = UUID.randomUUID(),
+                skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+                periodeFom = LocalDate.of(2022, 11, 7),
+                periodeTom = LocalDate.of(2022, 11, 29),
+                orgnummer = "456"
+            ),
+            BerørtPeriode(
+                vedtaksperiodeId = UUID.randomUUID(),
+                skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+                periodeFom = LocalDate.of(2022, 11, 30),
+                periodeTom = LocalDate.of(2022, 12, 15),
+                orgnummer = "456"
+            )
+        )
     ) = """{
         "@event_name":"revurdering_igangsatt",
         "id": "$id",
@@ -72,27 +162,46 @@ class RevurderingIgangsattE2ETest {
         "periodeForEndringTom":"2022-11-30",
         "årsak":"$årsak",
         "typeEndring": "REVURDERING",
-        "berørtePerioder":[
-            {
-                "vedtaksperiodeId":"c0f78b58-4687-4191-adf8-6588c5982abb",
-                "skjæringstidspunkt":"2022-10-03",
-                "periodeFom":"2022-11-07",
-                "periodeTom":"2022-11-29",
-                "orgnummer":"456",
-                "typeEndring": "REVURDERING"
-            },            
-            {
-                "vedtaksperiodeId":"c0c78b58-4687-4191-adf8-6588c5982abb",
-                "skjæringstidspunkt":"2022-10-03",
-                "periodeFom":"2022-11-30",
-                "periodeTom":"2022-12-15",
-                "orgnummer":"456",
-                "typeEndring": "REVURDERING"
-            }
-          ],
+        "berørtePerioder": ${berørtePerioder.map { it.toJsonString() }},
         "@id":"69cf0c28-16d9-464e-bc71-bd9eabea22a1",
         "@opprettet":"2022-12-06T15:44:57.01089295"
     }
     """
 
+    @Language("JSON")
+    private fun vedtaksperiodeUtbetaling(
+        vedtaksperiodeId: UUID = UUID.randomUUID(),
+        utbetalingId: UUID = UUID.randomUUID()
+    ) = """{
+        "@event_name":"vedtaksperiode_ny_utbetaling",
+        "@id": "${UUID.randomUUID()}",
+        "@opprettet": "${LocalDateTime.now()}",
+        "fødselsnummer": "foo",
+        "aktørId": "bar",
+        "organisasjonsnummer": "baz",
+        "vedtaksperiodeId": "$vedtaksperiodeId",
+        "utbetalingId": "$utbetalingId"
+    }
+    """
+
+    private class BerørtPeriode(
+        private val vedtaksperiodeId: UUID,
+        private val skjæringstidspunkt: LocalDate,
+        private val periodeFom: LocalDate,
+        private val periodeTom: LocalDate,
+        private val orgnummer: String,
+        private val typeEndring: String = "REVURDERING"
+    ) {
+        @Language("JSON")
+        fun toJsonString() = """
+            {
+                "vedtaksperiodeId":"$vedtaksperiodeId",
+                "skjæringstidspunkt":"$skjæringstidspunkt",
+                "periodeFom":"$periodeFom",
+                "periodeTom":"$periodeTom",
+                "orgnummer":"$orgnummer",
+                "typeEndring": "$typeEndring"
+            }
+        """
+    }
 }
