@@ -2,6 +2,7 @@ package no.nav.helse
 
 import kotliquery.queryOf
 import kotliquery.sessionOf
+import no.nav.helse.Revurderingstatus.*
 import no.nav.helse.rapids_rivers.testsupport.TestRapid
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
@@ -17,6 +18,7 @@ class RevurderingIgangsattE2ETest {
     private val river = TestRapid().apply {
         RevurderingIgangsettelser(this, ::dataSource)
         VedtaksperiodeUtbetalinger(this, ::dataSource)
+        Godkjenninger(this, ::dataSource)
     }
 
     @AfterAll
@@ -62,11 +64,43 @@ class RevurderingIgangsattE2ETest {
         )
 
         val id = UUID.randomUUID()
+        val utbetalingId1 = UUID.randomUUID()
         river.sendTestMessage(revurderingIgangsatt(id = id, berørtePerioder = listOf(periode1, periode2)))
-        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId1))
+        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId1, utbetalingId1))
+        river.sendTestMessage(godkjenningsbehov(utbetalingId1, godkjent = true, behandletMaskinelt = true))
 
         assertEquals(1, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId1))
         assertEquals(0, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId2))
+        assertEquals(IKKE_FERDIG, statusForRevurderingIgangsatt(id))
+        statusForBerørteVedtaksperioder(id).also { statuser ->
+            assertEquals(FERDIGSTILT_AUTOMATISK, statuser[vedtaksperiodeId1])
+            assertEquals(IKKE_FERDIG, statuser[vedtaksperiodeId2])
+        }
+
+        val utbetalingId2 = UUID.randomUUID()
+        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId2, utbetalingId2))
+        river.sendTestMessage(godkjenningsbehov(utbetalingId2, godkjent = true, behandletMaskinelt = false))
+
+        assertEquals(1, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId1))
+        assertEquals(1, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId2))
+        assertEquals(FERDIGSTILT_MANUELT, statusForRevurderingIgangsatt(id))
+        statusForBerørteVedtaksperioder(id).also { statuser ->
+            assertEquals(FERDIGSTILT_AUTOMATISK, statuser[vedtaksperiodeId1])
+            assertEquals(FERDIGSTILT_MANUELT, statuser[vedtaksperiodeId2])
+        }
+
+        river.inspektør.also { rapidInspector ->
+            val ferdigstiltmelding = rapidInspector.message(rapidInspector.size - 1)
+            assertEquals("revurdering_ferdigstilt", ferdigstiltmelding.path("@event_name").asText())
+            assertEquals(id.toString(), ferdigstiltmelding.path("revurderingId").asText())
+            assertEquals("FERDIGSTILT_MANUELT", ferdigstiltmelding.path("status").asText())
+            val berørtPerioder = ferdigstiltmelding.path("berørtePerioder").associate {
+                UUID.fromString(it.path("vedtaksperiodeId").asText()) to it.path("status").asText()
+            }
+            assertEquals(2, berørtPerioder.size)
+            assertEquals("FERDIGSTILT_AUTOMATISK", berørtPerioder[vedtaksperiodeId1])
+            assertEquals("FERDIGSTILT_MANUELT", berørtPerioder[vedtaksperiodeId2])
+        }
     }
 
     @Test
@@ -77,7 +111,6 @@ class RevurderingIgangsattE2ETest {
     }
 
     @Test
-    @Disabled
     fun `lagrer ikke vedtaksperiode utbetalinger for perioder som er ferdig`() {
         val vedtaksperiodeId = UUID.randomUUID()
         val periode1 = BerørtPeriode(
@@ -92,7 +125,8 @@ class RevurderingIgangsattE2ETest {
         val utbetalingId = UUID.randomUUID()
         river.sendTestMessage(revurderingIgangsatt(id = id, berørtePerioder = listOf(periode1)))
         river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId, utbetalingId))
-        // TODO: ferdigstill/godkjent utbetalingen
+
+        river.sendTestMessage(godkjenningsbehov(utbetalingId, godkjent = true, behandletMaskinelt = true))
 
         assertEquals(1, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId))
         river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId, UUID.randomUUID()))
@@ -109,6 +143,14 @@ class RevurderingIgangsattE2ETest {
         }
     }
 
+    private fun statusForRevurderingIgangsatt(id: UUID): Revurderingstatus {
+        return sessionOf(dataSource).use { session ->
+            @Language("PostgreSQL")
+            val query = "SELECT status FROM revurdering WHERE id = '$id'"
+            valueOf(session.run(queryOf(query).map { row -> row.string(1) }.asList).single())
+        }
+    }
+
     private fun tellRevurderingIgangsattVedtaksperioder(id: UUID): Int {
         return sessionOf(dataSource).use { session ->
             @Language("PostgreSQL")
@@ -116,6 +158,16 @@ class RevurderingIgangsattE2ETest {
             requireNotNull(
                 session.run(queryOf(query).map { row -> row.int(1) }.asSingle)
             )
+        }
+    }
+
+    private fun statusForBerørteVedtaksperioder(id: UUID): Map<UUID, Revurderingstatus> {
+        return sessionOf(dataSource).use { session ->
+            @Language("PostgreSQL")
+            val query = "SELECT vedtaksperiode_id, status FROM revurdering_vedtaksperiode WHERE revurdering_igangsatt_id = '$id'"
+            session.run(queryOf(query).map { row ->
+                UUID.fromString(row.string(1)) to valueOf(row.string(2))
+            }.asList).toMap()
         }
     }
 
@@ -183,6 +235,28 @@ class RevurderingIgangsattE2ETest {
         "utbetalingId": "$utbetalingId"
     }
     """
+    @Language("JSON")
+    private fun godkjenningsbehov(
+        utbetalingId: UUID = UUID.randomUUID(),
+        godkjent: Boolean,
+        behandletMaskinelt: Boolean
+    ) = """{
+        "@event_name":"behov",
+        "@id": "${UUID.randomUUID()}",
+        "@opprettet": "${LocalDateTime.now()}",
+        "@behov": ["Godkjenning"],
+        "@final": true,
+        "@besvart": "${LocalDateTime.now()}",
+        "utbetalingId": "$utbetalingId",
+        "@løsning": {
+          "Godkjenning": {
+            "godkjent": $godkjent,
+            "automatiskBehandling": $behandletMaskinelt
+          }
+        }
+    }
+    """
+
 
     private class BerørtPeriode(
         private val vedtaksperiodeId: UUID,
