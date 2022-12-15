@@ -1,4 +1,4 @@
-sp-revurdering-monitor
+sportsrevyen
 =======
 
 Holder oversikt over tilstand på revurderinger og sier ifra når en revurdering er over.

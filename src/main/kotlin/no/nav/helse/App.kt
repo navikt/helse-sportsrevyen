@@ -4,7 +4,7 @@ import no.nav.helse.rapids_rivers.RapidApplication
 import no.nav.helse.rapids_rivers.RapidsConnection
 import org.slf4j.LoggerFactory
 
-private val log = LoggerFactory.getLogger("no.nav.helse.sp-revurdering-monitor")
+private val log = LoggerFactory.getLogger("no.nav.helse.sportsrevyen")
 
 fun main() {
     val env = System.getenv()

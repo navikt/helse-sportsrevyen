@@ -13,7 +13,7 @@ jobs:
       - name: create docker tag
         run: echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_ENV
     outputs:
-      image: ghcr.io/${{ github.repository }}/sp-revurdering-monitor:${{ env.TAG }}
+      image: ghcr.io/${{ github.repository }}/sportsrevyen:${{ env.TAG }}
 
   build:
     name: build docker image
@@ -44,7 +44,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
-          args: --project-name=sp-revurdering-monitor --org=tbd-ty7 --fail-on=all
+          args: --project-name=sportsrevyen --org=tbd-ty7 --fail-on=all
           command: monitor
 
   deployDev:
@@ -60,15 +60,15 @@ jobs:
           RESOURCE: deploy/dev.yml
           IMAGE: ${{ needs.set_version.outputs.image }}
 
-#  deployProd:
-#    name: deploy to prod
-#    needs: [set_version, deployDev]
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v1
-#      - uses: nais/deploy/actions/deploy@v1
-#        env:
-#          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
-#          CLUSTER: prod-gcp
-#          RESOURCE: deploy/prod.yml
-#          IMAGE: ${{ needs.set_version.outputs.image }}
+  deployProd:
+    name: deploy to prod
+    needs: [set_version, deployDev]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: nais/deploy/actions/deploy@v1
+        env:
+          APIKEY: ${{ secrets.NAIS_DEPLOY_APIKEY }}
+          CLUSTER: prod-gcp
+          RESOURCE: deploy/prod.yml
+          IMAGE: ${{ needs.set_version.outputs.image }}

@@ -8,4 +8,4 @@
  * This project uses @Incubating APIs which are subject to change.
  */
 
-rootProject.name = "sp-revurdering-monitor"
+rootProject.name = "sportsrevyen"
