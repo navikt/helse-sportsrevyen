@@ -21,7 +21,7 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
                 it.require("skjæringstidspunkt", JsonNode::asLocalDate)
                 it.require("periodeForEndringFom", JsonNode::asLocalDate)
                 it.require("periodeForEndringTom", JsonNode::asLocalDate)
-                it.require("id") { id -> UUID.fromString(id.asText()) }
+                it.require("revurderingId") { id -> UUID.fromString(id.asText()) }
                 it.require("kilde") { kilde -> UUID.fromString(kilde.asText()) }
                 it.requireKey("fødselsnummer", "aktørId", "årsak")
                 it.requireArray("berørtePerioder") {
@@ -36,7 +36,7 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
     }
 
     override fun onPacket(packet: JsonMessage, context: MessageContext) {
-        val id = packet["id"].let { UUID.fromString(it.asText()) }
+        val id = packet["revurderingId"].let { UUID.fromString(it.asText()) }
         val årsak = packet["årsak"].asText()
         val opprettet = packet["@opprettet"].asLocalDateTime()
         val skjæringstidspunkt = packet["skjæringstidspunkt"].asLocalDate()
