@@ -26,8 +26,15 @@ data class UferdigRevurdering(private val revurdering: UUID, private val periode
 
         if (aggregertStatus == Revurderingstatus.IKKE_FERDIG) return
 
+        val (kilde, årsak, opprettet) = session.run(queryOf(hentMerInformasjon, this.revurdering).map { row ->
+            Triple(row.uuid("kilde"), row.string("aarsak"), row.localDateTime("opprettet"))
+        }.asList).single()
+
         context.publish(JsonMessage.newMessage("revurdering_ferdigstilt", mapOf(
             "revurderingId" to this.revurdering,
+            "revurderingIgangsatt" to opprettet,
+            "kilde" to kilde,
+            "årsak" to årsak,
             "status" to aggregertStatus,
             "berørtePerioder" to this.perioder.map { it.toJsonMap() }
         )).toJson().also {
@@ -38,6 +45,10 @@ data class UferdigRevurdering(private val revurdering: UUID, private val periode
     private companion object {
         private val sikkerlogg = LoggerFactory.getLogger("tjenestekall")
 
+        @Language("PostgreSQL")
+        private const val hentMerInformasjon = """
+            select kilde,aarsak,opprettet from revurdering where id=?;
+        """
         @Language("PostgreSQL")
         private const val settStatusPåRevurdering = """
             update revurdering set status = CAST(:status as revurderingstatus), oppdatert = now() where id = :id

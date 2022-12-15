@@ -3,6 +3,7 @@ package no.nav.helse
 import kotliquery.queryOf
 import kotliquery.sessionOf
 import no.nav.helse.Revurderingstatus.*
+import no.nav.helse.rapids_rivers.asLocalDateTime
 import no.nav.helse.rapids_rivers.testsupport.TestRapid
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
@@ -66,7 +67,10 @@ class RevurderingIgangsattE2ETest {
 
         val id = UUID.randomUUID()
         val utbetalingId1 = UUID.randomUUID()
-        river.sendTestMessage(revurderingIgangsatt(id = id, berørtePerioder = listOf(periode1, periode2)))
+        val kilde = UUID.randomUUID()
+        val årsak = "KORRIGERT_SØKNAD"
+        val opprettet = LocalDateTime.now()
+        river.sendTestMessage(revurderingIgangsatt(id = id, kilde = kilde, årsak = årsak, opprettet = opprettet, berørtePerioder = listOf(periode1, periode2)))
         river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId1, utbetalingId1))
         river.sendTestMessage(godkjenningsbehov(utbetalingId1, godkjent = true, behandletMaskinelt = true))
 
@@ -95,6 +99,9 @@ class RevurderingIgangsattE2ETest {
             assertEquals("revurdering_ferdigstilt", ferdigstiltmelding.path("@event_name").asText())
             assertEquals(id.toString(), ferdigstiltmelding.path("revurderingId").asText())
             assertEquals("FERDIGSTILT_MANUELT", ferdigstiltmelding.path("status").asText())
+            assertEquals(årsak, ferdigstiltmelding.path("årsak").asText())
+            assertEquals(kilde.toString(), ferdigstiltmelding.path("kilde").asText())
+            assertEquals(opprettet.withNano(0), ferdigstiltmelding.path("revurderingIgangsatt").asLocalDateTime().withNano(0))
             val berørtPerioder = ferdigstiltmelding.path("berørtePerioder").associate {
                 UUID.fromString(it.path("vedtaksperiodeId").asText()) to it.path("status").asText()
             }
@@ -322,6 +329,7 @@ class RevurderingIgangsattE2ETest {
         kilde: UUID = UUID.randomUUID(),
         id: UUID = UUID.randomUUID(),
         årsak: String = "KORRIGERT_SØKNAD",
+        opprettet: LocalDateTime = LocalDateTime.now(),
         berørtePerioder: List<BerørtPeriode> = listOf(
             BerørtPeriode(
                 vedtaksperiodeId = UUID.randomUUID(),
@@ -351,7 +359,7 @@ class RevurderingIgangsattE2ETest {
         "typeEndring": "REVURDERING",
         "berørtePerioder": ${berørtePerioder.map { it.toJsonString() }},
         "@id":"69cf0c28-16d9-464e-bc71-bd9eabea22a1",
-        "@opprettet":"2022-12-06T15:44:57.01089295"
+        "@opprettet":"$opprettet"
     }
     """
 
