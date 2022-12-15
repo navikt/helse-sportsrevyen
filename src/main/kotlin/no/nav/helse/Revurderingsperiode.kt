@@ -129,10 +129,6 @@ data class Revurderingsperiode(
         """
 
         @Language("PostgreSQL")
-        private const val alleBerørtePerioder = """
-            select vedtaksperiode_id, status from revurdering_vedtaksperiode where revurdering_igangsatt_id = :revurdering
-        """
-        @Language("PostgreSQL")
         private const val perioderIEnUferdigRevurdering = """
             select andre.vedtaksperiode_id, andre.revurdering_igangsatt_id, andre.status
             from revurdering_vedtaksperiode uferdig
