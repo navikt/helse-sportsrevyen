@@ -15,7 +15,7 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
     init {
         River(rapidApplication).apply {
             validate {
-                it.demandValue("@event_name", "revurdering_igangsatt") // TODO: dette skal etterhvert hete noe annet
+                it.demandAny("@event_name", listOf("revurdering_igangsatt", "overstyring_igangsatt"))
                 it.demandValue("typeEndring", "REVURDERING")
                 it.require("@opprettet", JsonNode::asLocalDateTime)
                 it.require("skjæringstidspunkt", JsonNode::asLocalDate)

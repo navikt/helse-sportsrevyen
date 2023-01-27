@@ -347,7 +347,7 @@ class RevurderingIgangsattE2ETest {
             )
         )
     ) = """{
-        "@event_name":"revurdering_igangsatt",
+        "@event_name":"overstyring_igangsatt",
         "revurderingId": "$id",
         "fødselsnummer":"fnr",
         "aktørId":"aktorId",
