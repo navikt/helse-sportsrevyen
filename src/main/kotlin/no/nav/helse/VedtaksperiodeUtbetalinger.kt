@@ -21,7 +21,6 @@ class VedtaksperiodeUtbetalinger(rapidApplication: RapidsConnection, private val
     override fun onPacket(packet: JsonMessage, context: MessageContext) {
         val vedtaksperiodeId = packet["vedtaksperiodeId"].let { UUID.fromString(it.asText()) }
         val utbetalingId = packet["utbetalingId"].let { UUID.fromString(it.asText()) }
-        if (utbetalingId == UUID.fromString("40415471-ab15-4d1f-8a93-fabd9db8a67f")) return
 
         dataSource().transactional {
             opprettVedtaksperiodeUtbetaling(vedtaksperiodeId, utbetalingId)
