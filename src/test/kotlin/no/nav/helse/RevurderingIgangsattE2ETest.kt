@@ -21,6 +21,7 @@ class RevurderingIgangsattE2ETest {
         VedtaksperiodeUtbetalinger(this, ::dataSource)
         Godkjenninger(this, ::dataSource)
         RevurderingFeilet(this, ::dataSource)
+        VedtaksperiodeForkastet(this, ::dataSource)
     }
 
     @AfterAll
@@ -246,6 +247,54 @@ class RevurderingIgangsattE2ETest {
     }
 
     @Test
+    fun `revurdering forkastet gjør at perioden markeres som feilet`() {
+        val vedtaksperiodeId1 = UUID.randomUUID()
+        val vedtaksperiodeId2 = UUID.randomUUID()
+        val periode1 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId1,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 7),
+            periodeTom = LocalDate.of(2022, 11, 29),
+            orgnummer = "456"
+        )
+        val periode2 = BerørtPeriode(
+            vedtaksperiodeId = vedtaksperiodeId2,
+            skjæringstidspunkt = LocalDate.of(2022, 10, 3),
+            periodeFom = LocalDate.of(2022, 11, 30),
+            periodeTom = LocalDate.of(2022, 12, 15),
+            orgnummer = "456"
+        )
+
+        val id = UUID.randomUUID()
+        val utbetalingId1 = UUID.randomUUID()
+        river.sendTestMessage(revurderingIgangsatt(id = id, berørtePerioder = listOf(periode1, periode2)))
+        river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId1, utbetalingId1))
+        river.sendTestMessage(godkjenningsbehov(utbetalingId1, godkjent = true, behandletMaskinelt = true))
+        river.sendTestMessage(vedtaksperiodeForkastet(vedtaksperiodeId2))
+
+        assertEquals(1, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId1))
+        assertEquals(0, tellVedtaksperiodeUtbetalinger(vedtaksperiodeId2))
+        assertEquals(FEILET, statusForRevurderingIgangsatt(id))
+        statusForBerørteVedtaksperioder(id).also { statuser ->
+            assertEquals(FERDIGSTILT_AUTOMATISK, statuser[vedtaksperiodeId1])
+            assertEquals(FEILET, statuser[vedtaksperiodeId2])
+        }
+
+        river.inspektør.also { rapidInspector ->
+            val ferdigstiltmelding = rapidInspector.message(rapidInspector.size - 1)
+            assertEquals("revurdering_ferdigstilt", ferdigstiltmelding.path("@event_name").asText())
+            assertEquals(id.toString(), ferdigstiltmelding.path("revurderingId").asText())
+            assertEquals("FEILET", ferdigstiltmelding.path("status").asText())
+            val berørtPerioder = ferdigstiltmelding.path("berørtePerioder").associate {
+                UUID.fromString(it.path("vedtaksperiodeId").asText()) to it.path("status").asText()
+            }
+            assertEquals(2, berørtPerioder.size)
+            assertEquals("FERDIGSTILT_AUTOMATISK", berørtPerioder[vedtaksperiodeId1])
+            assertEquals("FEILET", berørtPerioder[vedtaksperiodeId2])
+        }
+    }
+
+    @Test
     fun `lagrer ikke vedtaksperiode utbetalinger for perioder som ikke er berørt`() {
         val vedtaksperiodeId = UUID.randomUUID()
         river.sendTestMessage(vedtaksperiodeUtbetaling(vedtaksperiodeId))
@@ -409,6 +458,16 @@ class RevurderingIgangsattE2ETest {
         "@opprettet": "${LocalDateTime.now()}",
         "vedtaksperiodeId": "$vedtaksperiodeId",
         "gjeldendeTilstand": "$tilstand"
+    }
+    """
+    @Language("JSON")
+    private fun vedtaksperiodeForkastet(
+        vedtaksperiodeId: UUID,
+    ) = """{
+        "@event_name":"vedtaksperiode_forkastet",
+        "@id": "${UUID.randomUUID()}",
+        "@opprettet": "${LocalDateTime.now()}",
+        "vedtaksperiodeId": "$vedtaksperiodeId"
     }
     """
 
