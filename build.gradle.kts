@@ -1,22 +1,31 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.9.10"
+    kotlin("jvm") version "1.9.22"
 }
 
 val junitJupiterVersion = "5.10.0"
 val mainClass = "no.nav.helse.AppKt"
 
-group = "no.nav.helse"
-version = properties["version"] ?: "local-build"
-
 repositories {
+    val githubPassword: String? by project
     mavenCentral()
-    maven("https://jitpack.io")
+    /* ihht. https://github.com/navikt/utvikling/blob/main/docs/teknisk/Konsumere%20biblioteker%20fra%20Github%20Package%20Registry.md
+        så plasseres github-maven-repo (med autentisering) før nav-mirror slik at github actions kan anvende førstnevnte.
+        Det er fordi nav-mirroret kjører i Google Cloud og da ville man ellers fått unødvendige utgifter til datatrafikk mellom Google Cloud og GitHub
+     */
+    maven {
+        url = uri("https://maven.pkg.github.com/navikt/maven-release")
+        credentials {
+            username = "x-access-token"
+            password = githubPassword
+        }
+    }
+    maven("https://github-package-registry-mirror.gc.nav.no/cached/maven-release")
 }
 
 dependencies {
-    implementation("com.github.navikt:rapids-and-rivers:2023093008351696055717.ffdec6aede3d")
+    implementation("com.github.navikt:rapids-and-rivers:2024010209171704183456.6d035b91ffb4")
 
     implementation("org.flywaydb:flyway-core:9.7.0")
     implementation("com.zaxxer:HikariCP:5.0.1")
@@ -25,17 +34,19 @@ dependencies {
 
     testImplementation("org.testcontainers:postgresql:1.19.0")
 
-    testImplementation("org.junit.jupiter:junit-jupiter-api:$junitJupiterVersion")
-    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:$junitJupiterVersion")
+    testImplementation("org.junit.jupiter:junit-jupiter:$junitJupiterVersion")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 tasks {
-    withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = "17"
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
     }
 
-    named<KotlinCompile>("compileTestKotlin") {
-        kotlinOptions.jvmTarget = "17"
+    withType<Wrapper> {
+        gradleVersion = "8.5"
     }
 
     withType<Jar> {
@@ -61,9 +72,5 @@ tasks {
         testLogging {
             events("skipped", "failed")
         }
-    }
-
-    withType<Wrapper> {
-        gradleVersion = "8.3"
     }
 }

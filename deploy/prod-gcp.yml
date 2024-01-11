@@ -10,10 +10,10 @@ spec:
   port: 8080
   liveness:
     path: isalive
-    initialDelay: 10
+    initialDelay: 1
   readiness:
     path: isready
-    initialDelay: 10
+    initialDelay: 11
   replicas:
     min: 1
     max: 3
@@ -22,11 +22,10 @@ spec:
     path: /metrics
   resources:
     limits:
-      cpu: 2000m
       memory: 4Gi
     requests:
-      cpu: 200m
-      memory: 256Mi
+      cpu: 50m
+      memory: 64Mi
   gcp:
     sqlInstances:
       - type: POSTGRES_14
