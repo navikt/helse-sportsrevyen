@@ -29,7 +29,7 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
                 it.require("periodeForEndringTom", JsonNode::asLocalDate)
                 it.require("revurderingId") { id -> UUID.fromString(id.asText()) }
                 it.require("kilde") { kilde -> UUID.fromString(kilde.asText()) }
-                it.requireKey("fødselsnummer", "aktørId", "årsak")
+                it.requireKey("fødselsnummer", "årsak")
                 it.requireArray("berørtePerioder") {
                     require("vedtaksperiodeId") { vedtaksperiodeId -> UUID.fromString(vedtaksperiodeId.asText()) }
                     require("skjæringstidspunkt", JsonNode::asLocalDate)
@@ -47,7 +47,6 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
         val opprettet = packet["@opprettet"].asLocalDateTime()
         val skjæringstidspunkt = packet["skjæringstidspunkt"].asLocalDate()
         val fødselsnummer = packet["fødselsnummer"].asText()
-        val aktørId = packet["aktørId"].asText()
         val kilde = packet["kilde"].let { UUID.fromString(it.asText()) }
         val periodeForEndringFom = packet["periodeForEndringFom"].asLocalDate()
         val periodeForEndringTom = packet["periodeForEndringTom"].asLocalDate()
@@ -55,7 +54,7 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
 
         dataSource().transactional {
             erstatt(context, berørtePerioder.map { UUID.fromString(it["vedtaksperiodeId"].asText()) })
-            opprettRevurdering(id, opprettet, kilde, fødselsnummer, aktørId, skjæringstidspunkt, periodeForEndringFom, periodeForEndringTom, årsak)
+            opprettRevurdering(id, opprettet, kilde, fødselsnummer, skjæringstidspunkt, periodeForEndringFom, periodeForEndringTom, årsak)
             opprettVedtaksperioder(id, berørtePerioder)
         }
     }
@@ -75,7 +74,6 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
         opprettet: LocalDateTime,
         kilde: UUID,
         fødselsnummer: String,
-        aktørId: String,
         skjæringstidspunkt: LocalDate,
         periodeForEndringFom: LocalDate,
         periodeForEndringTom: LocalDate,
@@ -86,7 +84,6 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
             "opprettet" to opprettet,
             "kilde" to kilde,
             "fodselsnummer" to fødselsnummer,
-            "aktor_id" to aktørId,
             "skjaeringstidspunkt" to skjæringstidspunkt,
             "periode_for_endring_fom" to periodeForEndringFom,
             "periode_for_endring_tom" to periodeForEndringTom,
@@ -110,8 +107,8 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
     private companion object {
         @Language("PostgreSQL")
         private const val INSERT_REVURDERING = """
-             INSERT INTO revurdering(id, opprettet, kilde, fodselsnummer, aktor_id, skjaeringstidspunkt, periode_for_endring_fom, periode_for_endring_tom, aarsak)
-             VALUES (:id, :opprettet, :kilde, :fodselsnummer, :aktor_id, :skjaeringstidspunkt, :periode_for_endring_fom, :periode_for_endring_tom, :aarsak)
+             INSERT INTO revurdering(id, opprettet, kilde, fodselsnummer, skjaeringstidspunkt, periode_for_endring_fom, periode_for_endring_tom, aarsak)
+             VALUES (:id, :opprettet, :kilde, :fodselsnummer, :skjaeringstidspunkt, :periode_for_endring_fom, :periode_for_endring_tom, :aarsak)
               """
 
 

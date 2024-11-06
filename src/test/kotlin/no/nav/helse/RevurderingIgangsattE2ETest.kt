@@ -397,7 +397,6 @@ class RevurderingIgangsattE2ETest {
         "@event_name":"overstyring_igangsatt",
         "revurderingId": "$id",
         "fødselsnummer":"fnr",
-        "aktørId":"aktorId",
         "kilde":"$kilde",
         "skjæringstidspunkt":"2022-10-03",
         "periodeForEndringFom":"2022-11-07",
@@ -419,7 +418,6 @@ class RevurderingIgangsattE2ETest {
         "@id": "${UUID.randomUUID()}",
         "@opprettet": "${LocalDateTime.now()}",
         "fødselsnummer": "foo",
-        "aktørId": "bar",
         "organisasjonsnummer": "baz",
         "vedtaksperiodeId": "$vedtaksperiodeId",
         "utbetalingId": "$utbetalingId"
