@@ -1,9 +1,12 @@
 package no.nav.helse
 
+import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
+import com.github.navikt.tbd_libs.rapids_and_rivers.River
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.helse.Revurderingsperiode.Companion.alleUferdigeRevurderinger
 import no.nav.helse.Revurderingsperiode.Companion.hentUferdigePerioder
 import no.nav.helse.Revurderingsperiode.Companion.somRevurderinger
-import no.nav.helse.rapids_rivers.*
 import org.slf4j.LoggerFactory
 import java.util.*
 import javax.sql.DataSource

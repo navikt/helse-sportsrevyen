@@ -1,11 +1,11 @@
 package no.nav.helse
 
+import com.github.navikt.tbd_libs.rapids_and_rivers.JsonMessage
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.MessageContext
 import kotliquery.TransactionalSession
 import kotliquery.queryOf
 import no.nav.helse.Revurderingsperiode.Companion.aggregertStatus
 import no.nav.helse.Revurderingstatus.Companion.aggregertStatus
-import no.nav.helse.rapids_rivers.JsonMessage
-import no.nav.helse.rapids_rivers.MessageContext
 import org.intellij.lang.annotations.Language
 import org.slf4j.LoggerFactory
 import java.util.*

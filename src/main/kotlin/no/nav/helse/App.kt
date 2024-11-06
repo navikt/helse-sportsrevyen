@@ -1,7 +1,7 @@
 package no.nav.helse
 
+import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import no.nav.helse.rapids_rivers.RapidApplication
-import no.nav.helse.rapids_rivers.RapidsConnection
 import org.slf4j.LoggerFactory
 
 private val log = LoggerFactory.getLogger("no.nav.helse.sportsrevyen")

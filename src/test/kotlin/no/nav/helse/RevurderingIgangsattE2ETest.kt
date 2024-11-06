@@ -1,10 +1,11 @@
 package no.nav.helse
 
+import com.github.navikt.tbd_libs.rapids_and_rivers.asLocalDateTime
+import com.github.navikt.tbd_libs.rapids_and_rivers.test_support.TestRapid
+import com.github.navikt.tbd_libs.test_support.TestDataSource
 import kotliquery.queryOf
 import kotliquery.sessionOf
 import no.nav.helse.Revurderingstatus.*
-import no.nav.helse.rapids_rivers.asLocalDateTime
-import no.nav.helse.rapids_rivers.testsupport.TestRapid
 import org.intellij.lang.annotations.Language
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -12,28 +13,25 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.*
 
-@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RevurderingIgangsattE2ETest {
-    private val embeddedPostgres = embeddedPostgres()
-    private val dataSource = setupDataSourceMedFlyway(embeddedPostgres)
+    private lateinit var testDataSource: TestDataSource
     private val river = TestRapid().apply {
-        RevurderingIgangsettelser(this, ::dataSource)
-        VedtaksperiodeUtbetalinger(this, ::dataSource)
-        Godkjenninger(this, ::dataSource)
-        RevurderingFeilet(this, ::dataSource)
-        VedtaksperiodeForkastet(this, ::dataSource)
+        RevurderingIgangsettelser(this) { testDataSource.ds }
+        VedtaksperiodeUtbetalinger(this) { testDataSource.ds }
+        Godkjenninger(this) { testDataSource.ds }
+        RevurderingFeilet(this) { testDataSource.ds }
+        VedtaksperiodeForkastet(this) { testDataSource.ds }
     }
 
-    @AfterAll
+    @BeforeEach
     fun tearDown() {
-        river.stop()
-        dataSource.connection.close()
-        embeddedPostgres.close()
+        testDataSource = databaseContainer.nyTilkobling()
     }
 
     @AfterEach
     fun reset() {
-        dataSource.resetDatabase()
+        databaseContainer.droppTilkobling(testDataSource)
+        river.reset()
     }
 
     @Test
@@ -325,7 +323,7 @@ class RevurderingIgangsattE2ETest {
     }
 
     private fun tellRevurderingIgangsatt(id: UUID): Int {
-        return sessionOf(dataSource).use { session ->
+        return sessionOf(testDataSource.ds).use { session ->
             @Language("PostgreSQL")
             val query = "SELECT COUNT(*) FROM revurdering WHERE id = '$id'"
             requireNotNull(
@@ -335,7 +333,7 @@ class RevurderingIgangsattE2ETest {
     }
 
     private fun statusForRevurderingIgangsatt(id: UUID): Revurderingstatus {
-        return sessionOf(dataSource).use { session ->
+        return sessionOf(testDataSource.ds).use { session ->
             @Language("PostgreSQL")
             val query = "SELECT status FROM revurdering WHERE id = '$id'"
             valueOf(session.run(queryOf(query).map { row -> row.string(1) }.asList).single())
@@ -343,7 +341,7 @@ class RevurderingIgangsattE2ETest {
     }
 
     private fun tellRevurderingIgangsattVedtaksperioder(id: UUID): Int {
-        return sessionOf(dataSource).use { session ->
+        return sessionOf(testDataSource.ds).use { session ->
             @Language("PostgreSQL")
             val query = "SELECT COUNT(*) FROM revurdering_vedtaksperiode WHERE revurdering_igangsatt_id = '$id'"
             requireNotNull(
@@ -353,7 +351,7 @@ class RevurderingIgangsattE2ETest {
     }
 
     private fun statusForBerørteVedtaksperioder(id: UUID): Map<UUID, Revurderingstatus> {
-        return sessionOf(dataSource).use { session ->
+        return sessionOf(testDataSource.ds).use { session ->
             @Language("PostgreSQL")
             val query = "SELECT vedtaksperiode_id, status FROM revurdering_vedtaksperiode WHERE revurdering_igangsatt_id = '$id'"
             session.run(queryOf(query).map { row ->
@@ -363,7 +361,7 @@ class RevurderingIgangsattE2ETest {
     }
 
     private fun tellVedtaksperiodeUtbetalinger(vedtaksperiodeId: UUID): Int {
-        return sessionOf(dataSource).use { session ->
+        return sessionOf(testDataSource.ds).use { session ->
             @Language("PostgreSQL")
             val query = "SELECT COUNT(*) FROM vedtaksperiode_utbetaling WHERE vedtaksperiode_id = '$vedtaksperiodeId'"
             requireNotNull(
