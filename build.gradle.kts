@@ -3,8 +3,8 @@ plugins {
 }
 
 val junitJupiterVersion = "5.11.3"
-val rapidsAndRiversVersion = "2024110520091730833744.40f3b6aa7090"
-val tbdLibsVersion = "2024.11.06-12.37-f870e704"
+val rapidsAndRiversVersion = "2024111211071731406062.648687519469"
+val tbdLibsVersion = "2024.11.12-11.09-16cf2599"
 val mainClass = "no.nav.helse.AppKt"
 
 repositories {
