@@ -18,9 +18,11 @@ class Godkjenninger(rapidApplication: RapidsConnection, private val dataSource: 
     River.PacketListener {
     init {
         River(rapidApplication).apply {
+            precondition {
+                it.requireValue("@final", true)
+                it.requireAll("@behov", listOf("Godkjenning"))
+            }
             validate {
-                it.demandValue("@final", true)
-                it.demandAll("@behov", listOf("Godkjenning"))
                 it.require("utbetalingId") { id -> UUID.fromString(id.asText()) }
                 it.requireKey("@løsning.Godkjenning.godkjent")
                 it.requireKey("@løsning.Godkjenning.automatiskBehandling")

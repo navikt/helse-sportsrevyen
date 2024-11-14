@@ -13,9 +13,11 @@ import javax.sql.DataSource
 class RevurderingFeilet(rapidApplication: RapidsConnection, private val dataSource: () -> DataSource): River.PacketListener {
     init {
         River(rapidApplication).apply {
+            precondition {
+                it.requireValue("@event_name", "vedtaksperiode_endret")
+                it.requireValue("gjeldendeTilstand", "REVURDERING_FEILET")
+            }
             validate {
-                it.demandValue("@event_name", "vedtaksperiode_endret")
-                it.demandValue("gjeldendeTilstand", "REVURDERING_FEILET")
                 it.require("vedtaksperiodeId") { id -> UUID.fromString(id.asText()) }
             }
         }.register(this)

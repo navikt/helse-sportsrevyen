@@ -16,8 +16,8 @@ import javax.sql.DataSource
 class VedtaksperiodeUtbetalinger(rapidApplication: RapidsConnection, private val dataSource: () -> DataSource): River.PacketListener {
     init {
         River(rapidApplication).apply {
+            precondition { it.requireValue("@event_name", "vedtaksperiode_ny_utbetaling") }
             validate {
-                it.demandValue("@event_name", "vedtaksperiode_ny_utbetaling")
                 it.require("vedtaksperiodeId") { id -> UUID.fromString(id.asText()) }
                 it.require("utbetalingId") { id -> UUID.fromString(id.asText()) }
             }

@@ -22,9 +22,11 @@ import javax.sql.DataSource
 class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val dataSource: () -> DataSource): River.PacketListener {
     init {
         River(rapidApplication).apply {
+            precondition {
+                it.requireValue("@event_name", "overstyring_igangsatt")
+                it.requireValue("typeEndring", "REVURDERING")
+            }
             validate {
-                it.demandValue("@event_name", "overstyring_igangsatt")
-                it.demandValue("typeEndring", "REVURDERING")
                 it.require("@opprettet", JsonNode::asLocalDateTime)
                 it.require("skjæringstidspunkt", JsonNode::asLocalDate)
                 it.require("periodeForEndringFom", JsonNode::asLocalDate)

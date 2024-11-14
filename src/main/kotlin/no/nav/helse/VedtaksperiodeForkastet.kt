@@ -13,8 +13,8 @@ import javax.sql.DataSource
 class VedtaksperiodeForkastet(rapidApplication: RapidsConnection, private val dataSource: () -> DataSource): River.PacketListener {
     init {
         River(rapidApplication).apply {
+            precondition { it.requireValue("@event_name", "vedtaksperiode_forkastet") }
             validate {
-                it.demandValue("@event_name", "vedtaksperiode_forkastet")
                 it.require("vedtaksperiodeId") { id -> UUID.fromString(id.asText()) }
             }
         }.register(this)
