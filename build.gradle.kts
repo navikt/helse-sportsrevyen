@@ -6,6 +6,8 @@ val junitJupiterVersion = "5.11.3"
 val rapidsAndRiversVersion = "2024111509181731658731.11009b44c672"
 val tbdLibsVersion = "2024.11.15-09.09-08ca346b"
 val hikariCPVersion = "6.1.0"
+val flywayVersion = "10.21.0"
+val postgresqlVersion = "42.7.4"
 val mainClass = "no.nav.helse.AppKt"
 
 repositories {
@@ -28,9 +30,9 @@ repositories {
 dependencies {
     implementation("com.github.navikt:rapids-and-rivers:$rapidsAndRiversVersion")
 
-    implementation("org.flywaydb:flyway-database-postgresql:10.8.1")
+    implementation("org.flywaydb:flyway-database-postgresql:$flywayVersion")
     implementation("com.zaxxer:HikariCP:$hikariCPVersion")
-    implementation("org.postgresql:postgresql:42.7.2")
+    implementation("org.postgresql:postgresql:$postgresqlVersion")
     implementation("com.github.seratch:kotliquery:1.9.0")
 
     testImplementation("com.github.navikt.tbd-libs:rapids-and-rivers-test:$tbdLibsVersion")
