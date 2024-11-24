@@ -4,7 +4,7 @@ plugins {
 
 val junitJupiterVersion = "5.11.3"
 val rapidsAndRiversVersion = "2024112412131732446804.1b3dcc636bed"
-val tbdLibsVersion = "2024.11.15-09.09-08ca346b"
+val tbdLibsVersion = "2024.11.24-12.01-42fdc22d"
 val hikariCPVersion = "6.1.0"
 val flywayVersion = "10.21.0"
 val postgresqlVersion = "42.7.4"
