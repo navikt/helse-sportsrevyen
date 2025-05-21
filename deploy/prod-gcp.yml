@@ -46,3 +46,7 @@ spec:
       value: tbd-sportsrevyen-v1
     - name: KAFKA_RAPID_TOPIC
       value: tbd.rapid.v1
+  observability:
+    logging:
+      destinations:
+        - id: elastic
