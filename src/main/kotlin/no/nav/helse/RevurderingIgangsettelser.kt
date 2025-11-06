@@ -24,7 +24,6 @@ class RevurderingIgangsettelser(rapidApplication: RapidsConnection, private val 
         River(rapidApplication).apply {
             precondition {
                 it.requireValue("@event_name", "overstyring_igangsatt")
-                it.requireValue("typeEndring", "REVURDERING")
             }
             validate {
                 it.require("@opprettet", JsonNode::asLocalDateTime)
