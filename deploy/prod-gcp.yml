@@ -44,8 +44,6 @@ spec:
             envVarPrefix: DATABASE
   kafka:
     pool: nav-prod
-  secureLogs:
-    enabled: true
   env:
     - name: KAFKA_CONSUMER_GROUP_ID
       value: tbd-sportsrevyen-v1
