@@ -14,7 +14,7 @@ import java.util.*
 import javax.sql.DataSource
 
 // plukker opp godkjenningsbehov som har en løsning, og lukker(?) den relevante revurderingen
-class Godkjenninger(rapidApplication: RapidsConnection, private val dataSource: () -> DataSource) :
+class GodkjenningerRiver(rapidApplication: RapidsConnection, private val dataSource: () -> DataSource) :
     River.PacketListener {
     init {
         River(rapidApplication).apply {

@@ -20,7 +20,7 @@ fun launchApp(env: Map<String, String>) {
     RapidApplication.create(env).apply {
         RevurderingIgangsettelser(this, dataSourceBuilder::getDataSource)
         VedtaksperiodeUtbetalinger(this, dataSourceBuilder::getDataSource)
-        Godkjenninger(this, dataSourceBuilder::getDataSource)
+        GodkjenningerRiver(this, dataSourceBuilder::getDataSource)
         RevurderingFeilet(this, dataSourceBuilder::getDataSource)
         VedtaksperiodeForkastet(this, dataSourceBuilder::getDataSource)
     }.apply {

@@ -18,7 +18,7 @@ class RevurderingIgangsattE2ETest {
     private val river = TestRapid().apply {
         RevurderingIgangsettelser(this) { testDataSource.ds }
         VedtaksperiodeUtbetalinger(this) { testDataSource.ds }
-        Godkjenninger(this) { testDataSource.ds }
+        GodkjenningerRiver(this) { testDataSource.ds }
         RevurderingFeilet(this) { testDataSource.ds }
         VedtaksperiodeForkastet(this) { testDataSource.ds }
     }
