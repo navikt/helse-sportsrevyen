@@ -33,13 +33,20 @@ fun launchApp(env: Map<String, String>) {
 }
 
 enum class Revurderingstatus {
-    IKKE_FERDIG, // <- revurderinger har startet, men det er ting som ikke er ferdig
-    FERDIGSTILT_AUTOMATISK, // <- datamaskinen trykker OK
-    FERDIGSTILT_MANUELT, // <- saksbehandler trykker OK
-    AVVIST_AUTOMATISK, // <- datamaskinen avviser saken
-    AVVIST_MANUELT, // <- saksbehandler avviser saken
-    FEILET, //<- revurderinger har feilet av andre årsaker
-    ERSTATTET; // <- en annen revurdering startet før denne ble ferdig
+    /** revurderinger har startet, men det er ting som ikke er ferdig */
+    IKKE_FERDIG,
+    /** datamaskinen trykker OK */
+    FERDIGSTILT_AUTOMATISK,
+    /** saksbehandler trykker OK */
+    FERDIGSTILT_MANUELT,
+    /** datamaskinen avviser saken */
+    AVVIST_AUTOMATISK,
+    /** saksbehandler avviser saken */
+    AVVIST_MANUELT,
+    /** revurderinger har feilet av andre årsaker */
+    FEILET,
+    /** en annen revurdering startet før denne ble ferdig */
+    ERSTATTET;
 
     companion object {
         fun List<Revurderingstatus>.aggregertStatus() =
