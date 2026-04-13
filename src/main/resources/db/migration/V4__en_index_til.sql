@@ -1,0 +1,1 @@
+create index idx_revurdering_igangsatt on revurdering_vedtaksperiode (revurdering_igangsatt_id)
