@@ -142,10 +142,14 @@ data class Revurderingsperiode(
         @Language("PostgreSQL")
         private const val perioderIEnUferdigRevurdering = """
             select andre.vedtaksperiode_id, andre.revurdering_igangsatt_id, andre.status
-            from revurdering_vedtaksperiode uferdig
-            join revurdering_vedtaksperiode andre on uferdig.revurdering_igangsatt_id = andre.revurdering_igangsatt_id
-            where uferdig.status = 'IKKE_FERDIG' and uferdig.vedtaksperiode_id in (%s)
-            group by andre.vedtaksperiode_id, andre.revurdering_igangsatt_id
+            from revurdering_vedtaksperiode andre
+            where exists (
+                select 1
+                from revurdering_vedtaksperiode uferdig
+                where uferdig.status = 'IKKE_FERDIG'
+                  and uferdig.vedtaksperiode_id in (%s)
+                  and uferdig.revurdering_igangsatt_id = andre.revurdering_igangsatt_id
+            );
         """
 
         @Language("PostgreSQL")
