@@ -8,7 +8,6 @@ import com.github.navikt.tbd_libs.rapids_and_rivers_api.RapidsConnection
 import io.micrometer.core.instrument.MeterRegistry
 import kotliquery.TransactionalSession
 import kotliquery.queryOf
-import no.nav.helse.rapids_rivers.*
 import org.intellij.lang.annotations.Language
 import java.util.*
 import javax.sql.DataSource
@@ -55,8 +54,9 @@ class VedtaksperiodeUtbetalinger(rapidApplication: RapidsConnection, private val
         """
         @Language("PostgreSQL")
         private const val INSERT_VEDTAKSPERIODE_UTBETALING = """
-             INSERT INTO vedtaksperiode_utbetaling(vedtaksperiode_id, utbetaling_id)
+             INSERT INTO vedtaksperiode_utbetaling (vedtaksperiode_id, utbetaling_id)
              VALUES (:vedtaksperiodeId, :utbetalingId)
+             ON CONFLICT DO NOTHING
         """
     }
 }
